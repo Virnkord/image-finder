@@ -140,6 +140,5 @@ dmypy.json
 cython_debug/
 
 .vscode
-/NN/output
-/NN/dataset
-
+NN/output/
+NN/dataset/
