@@ -139,6 +139,5 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-.vscode
-NN/output/
-NN/dataset/
+output/
+dataset/
