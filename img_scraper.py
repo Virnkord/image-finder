@@ -1,7 +1,7 @@
 # from bing_image_downloader import downloader
 from google_images_download import google_images_download
 
-def search_google(keywords, max_results):
+def search_google(keywords, max_results, output_directory, class_name):
     response = google_images_download.googleimagesdownload()
     arguments = {"keywords":keywords,"limit":max_results,"print_urls":False}   #creating list of arguments
     response.download(arguments)   #passing the arguments to the function
@@ -28,9 +28,13 @@ def download(link, root_folder, class_name):
         raise Exception("Cannot download these type of file")
     #Check if another file of the same name already exists
     uid = uuid.uuid1()
-    img.save(f"./{root_folder}/{class_name}/{class_name}-{uid.hex}.jpg", "JPEG")
+    if class_name:
+        img.save(f"./{root_folder}/{class_name}/{class_name}-{uid.hex}.jpg", "JPEG")
+    else:
+        img.save(f"./{root_folder}/{class_name}-{uid.hex}.jpg", "JPEG")
+        
 
-def search_bing(keywords, max_results):
+def search_bing(keywords, max_results, output_directory, class_name):
     BING_IMAGE = 'https://www.bing.com/images/async?q='
 
     USER_AGENT = {
@@ -39,8 +43,8 @@ def search_bing(keywords, max_results):
     downloaded_images = 0
     n_images = max_results
     page = 0
-    root_folder = "downloads"
-    folder = keywords
+    root_folder = output_directory
+    folder = keywords if class_name else None
     while downloaded_images < n_images:
         searchurl = BING_IMAGE + keywords + '&first=' + str(page) + '&count=100'
 
@@ -67,7 +71,7 @@ def search_bing(keywords, max_results):
                 continue
     print('Done')
     
-def search_ddg(keywords, max_results):
+def search_ddg(keywords, max_results, output_directory, class_name):
     URL = 'https://duckduckgo.com/'
     PARAMS = {'q': keywords}
     HEADERS = {
@@ -100,8 +104,8 @@ def search_ddg(keywords, max_results):
     downloaded_images = 0
     n_images = max_results
     page = 0
-    root_folder = "downloads"
-    folder = keywords
+    root_folder = output_directory
+    folder = keywords if class_name else None
     request_url = URL + "i.js"
     while downloaded_images < n_images:
         while True:
@@ -136,6 +140,6 @@ def search_ddg(keywords, max_results):
         request_url = URL + data["next"]
     print('Done')
 
-search_google("rain", 10)
-search_bing("galaxy", 10)
-search_ddg("firefly", 10)
+# search_google("rain", 10)
+# search_bing("galaxy", 10)
+# search_ddg("firefly", 10)
