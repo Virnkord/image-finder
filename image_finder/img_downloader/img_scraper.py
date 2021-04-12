@@ -1,8 +1,7 @@
-# from bing_image_downloader import downloader
-from google_images_download import google_images_download
 
-def search_google(keywords, max_results, output_directory, class_name):
-    response = google_images_download.googleimagesdownload()
+def search_google(keywords, max_results, output_directory, class_name=None):
+    from img_downloader.google_images_download import googleimagesdownload
+    response = googleimagesdownload()
     arguments = {"keywords":keywords,"limit":max_results,"print_urls":False}   #creating list of arguments
     response.download(arguments)   #passing the arguments to the function
 
@@ -22,10 +21,12 @@ def download(link, root_folder, class_name):
 
     # Split last part of url to get image name and its extension
     img_name = link.rsplit('/', 1)[1]
-    img_type = img_name.split('.')[1]
-
+    img_type = img_name.split('.')[-1]
+    
+    if img_type.lower().isdigit(): img_type = "jpg"
+    
     if img_type.lower() != "jpg":
-        raise Exception("Cannot download these type of file")
+        raise Exception("Cannot download this type of file")
     #Check if another file of the same name already exists
     uid = uuid.uuid1()
     if class_name:
@@ -34,7 +35,7 @@ def download(link, root_folder, class_name):
         img.save(f"./{root_folder}/{class_name}-{uid.hex}.jpg", "JPEG")
         
 
-def search_bing(keywords, max_results, output_directory, class_name):
+def search_bing(keywords, max_results, output_directory, class_name=None):
     BING_IMAGE = 'https://www.bing.com/images/async?q='
 
     USER_AGENT = {
@@ -44,7 +45,7 @@ def search_bing(keywords, max_results, output_directory, class_name):
     n_images = max_results
     page = 0
     root_folder = output_directory
-    folder = keywords if class_name else None
+    folder = keywords if class_name else ""
     while downloaded_images < n_images:
         searchurl = BING_IMAGE + keywords + '&first=' + str(page) + '&count=100'
 
@@ -71,7 +72,7 @@ def search_bing(keywords, max_results, output_directory, class_name):
                 continue
     print('Done')
     
-def search_ddg(keywords, max_results, output_directory, class_name):
+def search_ddg(keywords, max_results, output_directory, class_name=None):
     URL = 'https://duckduckgo.com/'
     PARAMS = {'q': keywords}
     HEADERS = {
@@ -105,7 +106,7 @@ def search_ddg(keywords, max_results, output_directory, class_name):
     n_images = max_results
     page = 0
     root_folder = output_directory
-    folder = keywords if class_name else None
+    folder = keywords if class_name else ""
     request_url = URL + "i.js"
     while downloaded_images < n_images:
         while True:
@@ -142,4 +143,25 @@ def search_ddg(keywords, max_results, output_directory, class_name):
 
 # search_google("rain", 10)
 # search_bing("galaxy", 10)
-# search_ddg("firefly", 10)
+# search_ddg("firefly", 1, "downloads")
+
+def search_unsplash(keywords, max_results, output_directory, class_name=None):       
+    ak = input("Paste your access key here")
+
+    url = "https://api.unsplash.com/search/photos/?client_id=" + ak
+    params = {"query" : keywords, "per_page": max_results}
+    response = requests.get(url, params=params)
+    results = response.json()["results"]
+    img_urls = [item["urls"]["raw"] for item in results]
+    root_folder = output_directory
+    folder = keywords if class_name else ""
+    
+    if not os.path.exists(root_folder):
+            os.mkdir(root_folder)
+
+    target_folder = os.path.join(root_folder, folder)
+    if not os.path.exists(target_folder):
+        os.mkdir(target_folder)
+    
+    for link in img_urls:
+        download(link, root_folder,folder)
