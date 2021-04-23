@@ -22,13 +22,14 @@ else:  # If the Current Version of Python is 2.x
     httplib._MAXHEADERS = 1000
 import time  # Importing the time library to check the time of code execution
 import os
-import argparse
 import ssl
 import datetime
 import json
 import re
-import codecs
-import socket
+from io import BytesIO
+import requests
+from PIL import Image
+import uuid
 
 args_list = ["keywords", "keywords_from_file", "prefix_keywords", "suffix_keywords",
              "limit", "format", "color", "color_type", "usage_rights", "size",
@@ -106,13 +107,17 @@ class googleimagesdownload:
     def download_extended_page(self, url, chromedriver):
         from selenium import webdriver
         from selenium.webdriver.common.keys import Keys
+        from selenium.webdriver.chrome.options import Options
         if sys.version_info[0] < 3:
             reload(sys)
             sys.setdefaultencoding('utf8')
-        options = webdriver.ChromeOptions()
-        options.add_argument('--no-sandbox')
-        options.add_argument("--headless")
-
+        # options = webdriver.ChromeOptions()
+        # options.add_argument('--no-sandbox')
+        # options.add_argument("--headless")
+        options = Options()
+        options.headless = False
+        main_window_handle = None
+        
         try:
             browser = webdriver.Chrome(chromedriver, chrome_options=options)
         except Exception as e:
@@ -121,7 +126,8 @@ class googleimagesdownload:
                   "installed on your machine (exception: %s)" % e)
             sys.exit()
         browser.set_window_size(1024, 768)
-
+        main_window_handle = browser.current_window_handle
+        browser.switch_to.window(main_window_handle)
         # Open the link
         browser.get(url)
         browser.execute_script("""
@@ -297,7 +303,6 @@ class googleimagesdownload:
             raise e
         except OSError as e:
             raise e
-        print("completed ====> " + image_name.encode('raw_unicode_escape').decode('utf-8'))
         return
 
     def similar_images(self, similar_images):
@@ -491,223 +496,29 @@ class googleimagesdownload:
             pass
         return
 
-    # Download Image thumbnails
-    def download_image_thumbnail(self, image_url, main_directory, dir_name, return_image_name, print_urls,
-                                 socket_timeout, print_size, no_download, save_source, img_src, ignore_urls):
-        if print_urls or no_download:
-            print("Image URL: " + image_url)
-        if no_download:
-            return "success", "Printed url without downloading"
-        try:
-            req = Request(image_url, headers={
-                "User-Agent": "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"})
-            try:
-                # timeout time to download an image
-                if socket_timeout:
-                    timeout = float(socket_timeout)
-                else:
-                    timeout = 10
-
-                response = urlopen(req, None, timeout)
-                data = response.read()
-                response.close()
-
-                path = main_directory + "/" + dir_name + " - thumbnail" + "/" + return_image_name
-
-                try:
-                    output_file = open(path, 'wb')
-                    output_file.write(data)
-                    output_file.close()
-                    if save_source:
-                        list_path = main_directory + "/" + save_source + ".txt"
-                        list_file = open(list_path, 'a')
-                        list_file.write(path + '\t' + img_src + '\n')
-                        list_file.close()
-                except OSError as e:
-                    download_status = 'fail'
-                    download_message = "OSError on an image...trying next one..." + " Error: " + str(e)
-                except IOError as e:
-                    download_status = 'fail'
-                    download_message = "IOError on an image...trying next one..." + " Error: " + str(e)
-
-                download_status = 'success'
-                download_message = "Completed Image Thumbnail ====> " + return_image_name
-
-                # image size parameter
-                if print_size:
-                    print("Image Size: " + str(self.file_size(path)))
-
-            except UnicodeEncodeError as e:
-                download_status = 'fail'
-                download_message = "UnicodeEncodeError on an image...trying next one..." + " Error: " + str(e)
-
-        except HTTPError as e:  # If there is any HTTPError
-            download_status = 'fail'
-            download_message = "HTTPError on an image...trying next one..." + " Error: " + str(e)
-
-        except URLError as e:
-            download_status = 'fail'
-            download_message = "URLError on an image...trying next one..." + " Error: " + str(e)
-
-        except ssl.CertificateError as e:
-            download_status = 'fail'
-            download_message = "CertificateError on an image...trying next one..." + " Error: " + str(e)
-
-        except IOError as e:  # If there is any IOError
-            download_status = 'fail'
-            download_message = "IOError on an image...trying next one..." + " Error: " + str(e)
-        return download_status, download_message
-
     # Download Images
-    def download_image(self, image_url, image_format, main_directory, dir_name, count, print_urls, socket_timeout,
-                       prefix, print_size, no_numbering, no_download, save_source, img_src, silent_mode, thumbnail_only,
-                       format, ignore_urls):
-        if not silent_mode:
-            if print_urls or no_download:
-                print("Image URL: " + image_url)
-        if ignore_urls:
-            if any(url in image_url for url in ignore_urls.split(',')):
-                return "fail", "Image ignored due to 'ignore url' parameter", None, image_url
-        if thumbnail_only:
-            return "success", "Skipping image download...", str(image_url[(image_url.rfind('/')) + 1:]), image_url
-        if no_download:
-            return "success", "Printed url without downloading", None, image_url
-        try:
-            req = Request(image_url, headers={
-                "User-Agent": "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"})
-            try:
-                # timeout time to download an image
-                if socket_timeout:
-                    timeout = float(socket_timeout)
-                else:
-                    timeout = 10
+    def download_image(self, link, root_folder, class_name):
+        response = requests.get(link, timeout=3.000)
+        file = BytesIO(response.content)
+        img = Image.open(file)
 
-                response = urlopen(req, None, timeout)
-                data = response.read()
-                info = response.info()
-                response.close()
-
-                qmark = image_url.rfind('?')
-                if qmark == -1:
-                    qmark = len(image_url)
-                slash = image_url.rfind('/', 0, qmark) + 1
-                image_name = str(image_url[slash:qmark]).lower()
-
-                type = info.get_content_type()
-                if type == "image/jpeg" or type == "image/jpg":
-                    if not image_name.endswith(".jpg") and not image_name.endswith(".jpeg"):
-                        image_name += ".jpg"
-                elif type == "image/png":
-                    if not image_name.endswith(".png"):
-                        image_name += ".png"
-                elif type == "image/webp":
-                    if not image_name.endswith(".webp"):
-                        image_name += ".webp"
-                elif type == "image/gif":
-                    if not image_name.endswith(".gif"):
-                        image_name += ".gif"
-                elif type == "image/bmp" or type == "image/x-windows-bmp":
-                    if not image_name.endswith(".bmp"):
-                        image_name += ".bmp"
-                elif type == "image/x-icon" or type == "image/vnd.microsoft.icon":
-                    if not image_name.endswith(".ico"):
-                        image_name += ".ico"
-                elif type == "image/svg+xml":
-                    if not image_name.endswith(".svg"):
-                        image_name += ".svg"
-                else:
-                    download_status = 'fail'
-                    download_message = "Invalid image format '" + type + "'. Skipping..."
-                    return_image_name = ''
-                    absolute_path = ''
-                    return download_status, download_message, return_image_name, absolute_path
-
-                # prefix name in image
-                if prefix:
-                    prefix = prefix + " "
-                else:
-                    prefix = ''
-
-                if no_numbering:
-                    path = main_directory + "/" + dir_name + "/" + prefix + image_name
-                else:
-                    path = main_directory + "/" + dir_name + "/" + prefix + str(count) + "." + image_name
-
-                try:
-                    output_file = open(path, 'wb')
-                    output_file.write(data)
-                    output_file.close()
-                    if save_source:
-                        list_path = main_directory + "/" + save_source + ".txt"
-                        list_file = open(list_path, 'a')
-                        list_file.write(path + '\t' + img_src + '\n')
-                        list_file.close()
-                    absolute_path = os.path.abspath(path)
-                except OSError as e:
-                    download_status = 'fail'
-                    download_message = "OSError on an image...trying next one..." + " Error: " + str(e)
-                    return_image_name = ''
-                    absolute_path = ''
-
-                # return image name back to calling method to use it for thumbnail downloads
-                download_status = 'success'
-                download_message = "Completed Image ====> " + prefix + str(count) + "." + image_name
-                return_image_name = prefix + str(count) + "." + image_name
-
-                # image size parameter
-                if not silent_mode:
-                    if print_size:
-                        print("Image Size: " + str(self.file_size(path)))
-
-            except UnicodeEncodeError as e:
-                download_status = 'fail'
-                download_message = "UnicodeEncodeError on an image...trying next one..." + " Error: " + str(e)
-                return_image_name = ''
-                absolute_path = ''
-
-            except URLError as e:
-                download_status = 'fail'
-                download_message = "URLError on an image...trying next one..." + " Error: " + str(e)
-                return_image_name = ''
-                absolute_path = ''
-
-            except BadStatusLine as e:
-                download_status = 'fail'
-                download_message = "BadStatusLine on an image...trying next one..." + " Error: " + str(e)
-                return_image_name = ''
-                absolute_path = ''
-
-        except HTTPError as e:  # If there is any HTTPError
-            download_status = 'fail'
-            download_message = "HTTPError on an image...trying next one..." + " Error: " + str(e)
-            return_image_name = ''
-            absolute_path = ''
-
-        except URLError as e:
-            download_status = 'fail'
-            download_message = "URLError on an image...trying next one..." + " Error: " + str(e)
-            return_image_name = ''
-            absolute_path = ''
-
-        except ssl.CertificateError as e:
-            download_status = 'fail'
-            download_message = "CertificateError on an image...trying next one..." + " Error: " + str(e)
-            return_image_name = ''
-            absolute_path = ''
-
-        except IOError as e:  # If there is any IOError
-            download_status = 'fail'
-            download_message = "IOError on an image...trying next one..." + " Error: " + str(e)
-            return_image_name = ''
-            absolute_path = ''
-
-        except IncompleteRead as e:
-            download_status = 'fail'
-            download_message = "IncompleteReadError on an image...trying next one..." + " Error: " + str(e)
-            return_image_name = ''
-            absolute_path = ''
-
-        return download_status, download_message, return_image_name, absolute_path
+        # Split last part of url to get image name and its extension
+        img_name = link.rsplit('/', 1)[1]
+        img_type = img_name.split('.')[-1]
+        
+        if img_type.lower().isdigit(): img_type = "jpg"
+        
+        if img_type.lower() != "jpg":
+            return "", "", "error"
+        #Check if another file of the same name already exists
+        uid = uuid.uuid4()
+        if class_name:
+            return_image_name = f"{root_folder}/{class_name}/{uid.hex}.jpg"
+            img.save(return_image_name, "JPEG")
+        else:
+            return_image_name = f"{root_folder}/{uid.hex}.jpg"
+            img.save(return_image_name, "JPEG")
+        return return_image_name, img.filename, "success"
 
     def _get_all_items(self, image_objects, main_directory, dir_name, limit, arguments):
         items = []
@@ -727,26 +538,11 @@ class googleimagesdownload:
                         print("\nImage Metadata: " + str(object))
 
                 # download the images
-                download_status, download_message, return_image_name, absolute_path = self.download_image(
-                    object['image_link'], object['image_format'], main_directory, dir_name, count,
-                    arguments['print_urls'], arguments['socket_timeout'], arguments['prefix'], arguments['print_size'],
-                    arguments['no_numbering'], arguments['no_download'], arguments['save_source'],
-                    object['image_source'], arguments["silent_mode"], arguments["thumbnail_only"], arguments['format'],
-                    arguments['ignore_urls'])
-                if not arguments["silent_mode"]:
-                    print(download_message)
+                (return_image_name, absolute_path, download_status) = self.download_image(object['image_link'], main_directory, dir_name)
+
                 if download_status == "success":
-
-                    # download image_thumbnails
-                    if arguments['thumbnail'] or arguments["thumbnail_only"]:
-                        download_status, download_message_thumbnail = self.download_image_thumbnail(
-                            object['image_thumbnail_url'], main_directory, dir_name, return_image_name,
-                            arguments['print_urls'], arguments['socket_timeout'], arguments['print_size'],
-                            arguments['no_download'], arguments['save_source'], object['image_source'],
-                            arguments['ignore_urls'])
-                        if not arguments["silent_mode"]:
-                            print(download_message_thumbnail)
-
+                    print("Total images downloaded from Google: ", count, end='\r')
+                    sys.stdout.flush()
                     count += 1
                     object['image_filename'] = return_image_name
                     items.append(object)  # Append all the links in the list named 'Links'
@@ -762,6 +558,7 @@ class googleimagesdownload:
             print("\n\nUnfortunately all " + str(
                 limit) + " could not be downloaded because some images were not downloadable. " + str(
                 count - 1) + " is all we got for this search filter!")
+        print('\nDone')
         return items, errorCount, abs_path
 
     # Bulk Download
@@ -886,22 +683,13 @@ class googleimagesdownload:
             for sky in suffix_keywords:  # 2.for every suffix keywords
                 i = 0
                 while i < len(search_keyword):  # 3.for every main keyword
-                    iteration = "\n" + "Item no.: " + str(i + 1) + " -->" + " Item name = " + (pky) + (
-                    search_keyword[i]) + (sky)
-                    if not arguments["silent_mode"]:
-                        print(iteration.encode('raw_unicode_escape').decode('utf-8'))
-                        print("Evaluating...")
-                    else:
-                        print("Downloading images for: " + (pky) + (search_keyword[i]) + (sky) + " ...")
+
                     search_term = pky + search_keyword[i] + sky
 
                     if arguments['image_directory']:
                         dir_name = arguments['image_directory']
-                    elif arguments['no_directory']:
-                        dir_name = ''
                     else:
-                        dir_name = search_term + (
-                            '-' + arguments['color'] if arguments['color'] else '')  # sub-directory
+                        dir_name = ''
 
                     if not arguments["no_download"]:
                         self.create_directories(main_directory, dir_name, arguments['thumbnail'],
@@ -918,11 +706,6 @@ class googleimagesdownload:
                     else:
                         images, tabs = self.download_extended_page(url, arguments['chromedriver'])
 
-                    if not arguments["silent_mode"]:
-                        if arguments['no_download']:
-                            print("Getting URLs without downloading images...")
-                        else:
-                            print("Starting Download...")
                     items, errorCount, abs_path = self._get_all_items(images, main_directory, dir_name, limit,
                                                                       arguments)  # get all image items and download images
                     paths[pky + search_keyword[i] + sky] = abs_path
