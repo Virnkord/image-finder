@@ -39,7 +39,8 @@ print(search_engines)
 
 for keyword in search_keywords:
     if "unsplash" in search_engines:
-        search_unsplash(keyword, limit, output_directory, class_directory)
+        ak = input("Paste your access key here\n")
+        search_unsplash(keyword, limit, output_directory, ak, class_directory)
     if "google" in search_engines:
         search_google(keyword, limit, output_directory, class_directory)
     if "bing" in search_engines:
