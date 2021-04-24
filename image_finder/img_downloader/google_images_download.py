@@ -518,7 +518,7 @@ class googleimagesdownload:
         else:
             return_image_name = f"{root_folder}/{uid.hex}.jpg"
             img.save(return_image_name, "JPEG")
-        return return_image_name, img.filename, "success"
+        return return_image_name, img_name, "success"
 
     def _get_all_items(self, image_objects, main_directory, dir_name, limit, arguments):
         items = []
@@ -538,15 +538,15 @@ class googleimagesdownload:
                         print("\nImage Metadata: " + str(object))
 
                 # download the images
-                (return_image_name, absolute_path, download_status) = self.download_image(object['image_link'], main_directory, dir_name)
+                (return_image_name, link_name, download_status) = self.download_image(object['image_link'], main_directory, dir_name)
 
                 if download_status == "success":
                     print("Total images downloaded from Google: ", count, end='\r')
                     sys.stdout.flush()
                     count += 1
-                    object['image_filename'] = return_image_name
+                    object['image_filename'] = link_name
                     items.append(object)  # Append all the links in the list named 'Links'
-                    abs_path.append(absolute_path)
+                    abs_path.append(return_image_name)
                 else:
                     errorCount += 1
 

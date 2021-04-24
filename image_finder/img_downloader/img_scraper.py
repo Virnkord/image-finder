@@ -24,13 +24,16 @@ def download(link, root_folder, class_name):
     #Check if another file of the same name already exists
     uid = uuid.uuid4()
     if class_name:
-        img.save(f"{root_folder}/{class_name}/{uid.hex}.jpg", "JPEG")
+        return_image_name = f"{root_folder}/{class_name}/{uid.hex}.jpg"
+        img.save(return_image_name, "JPEG")
     else:
-        img.save(f"{root_folder}/{uid.hex}.jpg", "JPEG")
+        return_image_name = f"{root_folder}/{uid.hex}.jpg"
+        img.save(return_image_name, "JPEG")
+    return return_image_name
         
 
 def search_google(keywords, max_results, output_directory, class_name=None):
-    from img_downloader.google_images_download import googleimagesdownload
+    from image_finder.img_downloader.google_images_download import googleimagesdownload
     
     root_folder = os.path.join(os.getcwd(),output_directory)
     folder = keywords if class_name else ""
@@ -39,13 +42,14 @@ def search_google(keywords, max_results, output_directory, class_name=None):
     target_folder = os.path.join(root_folder, folder)
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
-    print(target_folder)
     
     response = googleimagesdownload()
     folder = keywords if class_name else ""
     arguments = {"keywords":keywords,"limit":max_results,"print_urls":False, "silent_mode":True,
-                 "output_directory":output_directory, "image_directory":folder}   #creating list of arguments
-    response.download(arguments)   #passing the arguments to the function
+                 "output_directory":root_folder, "image_directory":folder}   #creating list of arguments
+    (paths, _) = response.download(arguments)   #passing the arguments to the function
+    
+    return paths[keywords]
 
 def search_bing(keywords, max_results, output_directory, class_name=None):
     BING_IMAGE = 'https://bing.com/images/async?q='
@@ -66,8 +70,8 @@ def search_bing(keywords, max_results, output_directory, class_name=None):
     target_folder = os.path.join(root_folder, folder)
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
-    print(target_folder)
         
+    paths = []
     while downloaded_images < n_images:
         searchurl = BING_IMAGE + keywords + '&first=' + str(page) + '&count=20&mmasync=1'
 
@@ -82,13 +86,14 @@ def search_bing(keywords, max_results, output_directory, class_name=None):
             try:
                 if downloaded_images >= n_images:
                     break;
-                download(link, root_folder,folder)
+                paths.append(download(link, root_folder,folder))
                 downloaded_images += 1
                 print("Total images from downloaded Bing: ", downloaded_images, end='\r')
                 sys.stdout.flush()
             except:
                 continue
     print('\nDone')
+    return paths
     
 def search_ddg(keywords, max_results, output_directory, class_name=None):
     URL = 'https://duckduckgo.com/'
@@ -134,7 +139,6 @@ def search_ddg(keywords, max_results, output_directory, class_name=None):
     target_folder = os.path.join(root_folder, folder)
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
-    print(target_folder)
     
     while downloaded_images < n_images:
         while True:
@@ -151,9 +155,11 @@ def search_ddg(keywords, max_results, output_directory, class_name=None):
         if len(data["results"]) > n_images - downloaded_images:
             data["results"] = data["results"][:n_images - downloaded_images]
 
+        paths = []
         for results in data["results"]:
             try:
-                download(results["image"], root_folder, folder)
+
+                paths.append(download(results["image"], root_folder, folder))
                 downloaded_images+= 1
                 print("Total images downloaded from DuckDuckGo: ", downloaded_images, end='\r')
                 sys.stdout.flush()
@@ -161,9 +167,10 @@ def search_ddg(keywords, max_results, output_directory, class_name=None):
                 continue
 
         if "next" not in data:
-            return 0
+            return paths
         request_url = URL + data["next"]
     print('\nDone')
+    return paths
 
 def search_unsplash(keywords, max_results, output_directory, ak, class_name=None):    
     url = "https://api.unsplash.com/search/photos/?client_id=" + ak
@@ -182,10 +189,11 @@ def search_unsplash(keywords, max_results, output_directory, ak, class_name=None
     target_folder = os.path.join(root_folder, folder)
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
-    print(target_folder)
 
+    paths = []
     for i, link in enumerate(img_urls):
-        download(link, root_folder,folder)
+        paths.append(download(link, root_folder,folder))
         print("Total images downloaded from Unsplash: ", i+1, end='\r')
         sys.stdout.flush()
     print('\nDone')
+    return paths
