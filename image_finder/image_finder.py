@@ -2,7 +2,6 @@ import os,sys,inspect
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0,parentdir) 
-
 from image_finder.NN.pyimagesearch import config
 from image_finder.NN.predict import nn_filter
 from tensorflow.keras.models import load_model
@@ -11,17 +10,23 @@ import pickle
 def search_images(search_keywords, limit, output_directory, class_directory, search_engines):
     from image_finder.img_downloader.img_scraper import search_google, search_bing, search_ddg, search_unsplash
     images = {}
+    if "unsplash" in search_engines:
+        ak = input("Paste your Unsplash access key here\n")
     for keyword in search_keywords:
+        print("\nDownloading images for keyword", keyword)
         images[keyword] = []
         if "unsplash" in search_engines:
-            ak = input("Paste your access key here\n")
-            images[keyword].extend(search_unsplash(keyword, limit, output_directory, ak, class_directory))
+            path, _ = search_unsplash(keyword, limit, output_directory, ak, class_directory)
+            images[keyword].extend(path)
         if "google" in search_engines:
-            images[keyword].extend(search_google(keyword, limit, output_directory, class_directory))
+            path, _ = search_google(keyword, limit, output_directory, class_directory)
+            images[keyword].extend(path)
         if "bing" in search_engines:
-            images[keyword].extend(search_bing(keyword, limit, output_directory, class_directory))
+            path, _ = search_bing(keyword, limit, output_directory, class_directory)
+            images[keyword].extend(path)
         if "duckduckgo" in search_engines:
-            images[keyword].extend(search_ddg(keyword, limit, output_directory, class_directory))
+            path, _ = search_ddg(keyword, limit, output_directory, class_directory)
+            images[keyword].extend(path)
     return images
 
 def filter_images(images):

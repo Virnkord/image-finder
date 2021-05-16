@@ -47,9 +47,9 @@ def search_google(keywords, max_results, output_directory, class_name=None):
     folder = keywords if class_name else ""
     arguments = {"keywords":keywords,"limit":max_results,"print_urls":False, "silent_mode":True,
                  "output_directory":root_folder, "image_directory":folder}   #creating list of arguments
-    (paths, _) = response.download(arguments)   #passing the arguments to the function
+    (paths, _, urls) = response.download(arguments)   #passing the arguments to the function
     
-    return paths[keywords]
+    return paths[keywords], urls
 
 def search_bing(keywords, max_results, output_directory, class_name=None):
     BING_IMAGE = 'https://bing.com/images/async?q='
@@ -93,7 +93,7 @@ def search_bing(keywords, max_results, output_directory, class_name=None):
             except:
                 continue
     print('\nDone')
-    return paths
+    return paths, results
     
 def search_ddg(keywords, max_results, output_directory, class_name=None):
     URL = 'https://duckduckgo.com/'
@@ -155,11 +155,12 @@ def search_ddg(keywords, max_results, output_directory, class_name=None):
         if len(data["results"]) > n_images - downloaded_images:
             data["results"] = data["results"][:n_images - downloaded_images]
 
-        paths = []
+        paths, urls = [], []
         for results in data["results"]:
             try:
 
                 paths.append(download(results["image"], root_folder, folder))
+                urls.append(results["image"])
                 downloaded_images+= 1
                 print("Total images downloaded from DuckDuckGo: ", downloaded_images, end='\r')
                 sys.stdout.flush()
@@ -170,7 +171,7 @@ def search_ddg(keywords, max_results, output_directory, class_name=None):
             return paths
         request_url = URL + data["next"]
     print('\nDone')
-    return paths
+    return paths, urls
 
 def search_unsplash(keywords, max_results, output_directory, ak, class_name=None):    
     url = "https://api.unsplash.com/search/photos/?client_id=" + ak
@@ -196,4 +197,4 @@ def search_unsplash(keywords, max_results, output_directory, ak, class_name=None
         print("Total images downloaded from Unsplash: ", i+1, end='\r')
         sys.stdout.flush()
     print('\nDone')
-    return paths
+    return paths, img_urls
