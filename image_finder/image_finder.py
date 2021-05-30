@@ -1,4 +1,5 @@
 import os,sys,inspect
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0,parentdir) 
