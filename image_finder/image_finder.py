@@ -50,10 +50,11 @@ if __name__ == "__main__":
                         required=False)
     parser.add_argument('-l', '--limit', help='number', type=int, required=False)
     parser.add_argument('-e', '--engine', help='delimited list input', type=str, required=False)
+    parser.add_argument('-nf', '--nofilter', help='disable filtering', action='store_true', required=False)
 
     args = parser.parse_args()
     arguments = vars(args)
-    search_keywords = [str(item) for item in arguments['keywords'].split(',')]
+    search_keywords = [str(item) for item in arguments['keywords'].replace(" ", "").split(',')]
     limit = arguments['limit']
     available_engines = ["unsplash", "google", "bing", "duckduckgo", "all"]
     if arguments['engine']:
@@ -75,5 +76,8 @@ if __name__ == "__main__":
         output_directory = "downloads"
 
     class_directory = True if arguments['class_directory'] else None
+    filtering = not arguments['nofilter']
+    print(search_keywords)
     images = search_images(search_keywords, limit, output_directory, class_directory, search_engines)
-    filter_images(images)
+    if filtering:
+        filter_images(images)
