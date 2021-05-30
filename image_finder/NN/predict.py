@@ -38,7 +38,7 @@ def nn_filter(imagePaths, model, lb, keyword):
 			# load the input image (in OpenCV format), resize it such that it
 			# fits on our screen, and grab its dimensions
 			image = cv2.imread(imagePath)
-			image = imutils.resize(image, width=600)
+			# image = imutils.resize(image, width=600)
 			(h, w) = image.shape[:2]
 
 			# scale the predicted bounding box coordinates based on the image
