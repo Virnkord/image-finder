@@ -5,13 +5,18 @@ import time
 import uuid
 import os
 import sys
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 
 def download(link, root_folder, class_name):
-    response = requests.get(link, timeout=3.000)
-    file = BytesIO(response.content)
-    img = Image.open(file)
+    while True:
+        try:
+            response = requests.get(link, timeout=3.000)
+            # requests.post(url, headers, timeout=10)
+            break
+        except requests.exceptions.Timeout:
+            time.sleep(1)
+            continue
 
     # Split last part of url to get image name and its extension
     img_name = link.rsplit('/', 1)[1]
@@ -21,6 +26,11 @@ def download(link, root_folder, class_name):
     
     if img_type.lower() != "jpg":
         raise Exception("Cannot download this type of file")
+    file = BytesIO(response.content)
+    try:
+        img = Image.open(file)
+    except UnidentifiedImageError:
+        raise Exception("Corrupted file")
     #Check if another file of the same name already exists
     uid = uuid.uuid4()
     if class_name:
@@ -175,7 +185,14 @@ def search_ddg(keywords, max_results, output_directory, class_name=None):
 def search_unsplash(keywords, max_results, output_directory, ak, class_name=None):    
     url = "https://api.unsplash.com/search/photos/?client_id=" + ak
     params = {"query" : keywords, "per_page": max_results}
-    response = requests.get(url, params=params)
+    while True:
+        try:
+            response = requests.get(url, params=params, timeout=3.000)
+            # requests.post(url, headers, timeout=10)
+            break
+        except requests.exceptions.Timeout:
+            time.sleep(1)
+            continue
     if ("errors" in response.json() and response.json()["errors"][0] == "OAuth error: The access token is invalid"):
         raise Exception("OAuth error: The access token is invalid")
     results = response.json()["results"]

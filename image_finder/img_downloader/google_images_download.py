@@ -28,7 +28,7 @@ import json
 import re
 from io import BytesIO
 import requests
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import uuid
 
 args_list = ["keywords", "keywords_from_file", "prefix_keywords", "suffix_keywords",
@@ -498,9 +498,14 @@ class googleimagesdownload:
 
     # Download Images
     def download_image(self, link, root_folder, class_name):
-        response = requests.get(link, timeout=3.000)
-        file = BytesIO(response.content)
-        img = Image.open(file)
+        while True:
+            try:
+                response = requests.get(link, timeout=3.000)
+                # requests.post(url, headers, timeout=10)
+                break
+            except requests.exceptions.Timeout:
+                time.sleep(1)
+                continue
 
         # Split last part of url to get image name and its extension
         img_name = link.rsplit('/', 1)[1]
@@ -510,8 +515,14 @@ class googleimagesdownload:
         
         if img_type.lower() != "jpg":
             return "", "", "error"
-        #Check if another file of the same name already exists
+
         uid = uuid.uuid4()
+        file = BytesIO(response.content)
+        try:
+            img = Image.open(file)
+        except UnidentifiedImageError:
+            return "", "", "error"
+        
         if class_name:
             return_image_name = os.path.join(root_folder, class_name, f"{uid.hex}.jpg")
             img.save(return_image_name, "JPEG")
