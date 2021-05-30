@@ -24,10 +24,10 @@ def download(link, root_folder, class_name):
     #Check if another file of the same name already exists
     uid = uuid.uuid4()
     if class_name:
-        return_image_name = f"{root_folder}/{class_name}/{uid.hex}.jpg"
+        return_image_name = os.path.join(root_folder, class_name, f"{uid.hex}.jpg")
         img.save(return_image_name, "JPEG")
     else:
-        return_image_name = f"{root_folder}/{uid.hex}.jpg"
+        return_image_name = os.path.join(root_folder,f"{uid.hex}.jpg")
         img.save(return_image_name, "JPEG")
     return return_image_name
         
@@ -139,7 +139,7 @@ def search_ddg(keywords, max_results, output_directory, class_name=None):
     target_folder = os.path.join(root_folder, folder)
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
-    
+    paths, urls = [], []
     while downloaded_images < n_images:
         while True:
             try:
@@ -155,7 +155,6 @@ def search_ddg(keywords, max_results, output_directory, class_name=None):
         if len(data["results"]) > n_images - downloaded_images:
             data["results"] = data["results"][:n_images - downloaded_images]
 
-        paths, urls = [], []
         for results in data["results"]:
             try:
 

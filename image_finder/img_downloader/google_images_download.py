@@ -513,10 +513,10 @@ class googleimagesdownload:
         #Check if another file of the same name already exists
         uid = uuid.uuid4()
         if class_name:
-            return_image_name = f"{root_folder}/{class_name}/{uid.hex}.jpg"
+            return_image_name = os.path.join(root_folder, class_name, f"{uid.hex}.jpg")
             img.save(return_image_name, "JPEG")
         else:
-            return_image_name = f"{root_folder}/{uid.hex}.jpg"
+            return_image_name = os.path.join(root_folder,f"{uid.hex}.jpg")
             img.save(return_image_name, "JPEG")
         return return_image_name, img_name, "success"
 
@@ -563,7 +563,7 @@ class googleimagesdownload:
         return items, errorCount, abs_path, urls
 
     # Bulk Download
-    def download(self, arguments):
+    def download(self, arguments):  # sourcery no-metrics
         paths_agg = {}
         # for input coming from other python files
         if __name__ != "__main__":
