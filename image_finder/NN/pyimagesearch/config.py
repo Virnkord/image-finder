@@ -12,8 +12,8 @@ BASE_OUTPUT = "output"
 
 # define the path to the output model, label binarizer, plots output
 # directory, and testing image paths
-MODEL_PATH = os.path.sep.join([BASE_OUTPUT, "detector.h5"])
-LB_PATH = os.path.sep.join([BASE_OUTPUT, "lb.pickle"])
+MODEL_PATH = os.path.sep.join([BASE_OUTPUT, "detector-20210530.h5"])
+LB_PATH = os.path.sep.join([BASE_OUTPUT, "lb-20210530.pickle"])
 PLOTS_PATH = os.path.sep.join([BASE_OUTPUT, "plots"])
 TEST_PATHS = os.path.sep.join([BASE_OUTPUT, "test_paths.txt"])
 
